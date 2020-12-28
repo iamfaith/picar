@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="icon" href="favicon.ico" />
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <title>rpi-robot control</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        height: 100vh;
+      }
+      .fit {
+        /* width: 100%; */
+        max-width: 100%;
+        max-height: 100vh;
+        display: block;
+      }
+    </style>
+  </head>
+  <body id="container">
+    <script src="js/socket_io.js"></script>
+    <script src="js/nipplejs.min.js"></script>
+    <div id='static'></div>
+    <script language="javascript">
+      try {
+        //document.write(
+          //'<img class="fit" src="//' +
+            //window.location.hostname +
+          //  ':8080/?action=stream" class="img-responsive" />'
+        //);
+        var socket1 = io.connect('http://'+window.location.hostname +':5000')
+        console.log(socket1)
+      } catch(e) {
+        console.log(e)
+      }
+
+      var socket = io()
+      //io.connect('http://'+window.location.hostname +':5000')
+      socket.on("connect", function () {
+        console.log("connected to flask-socketio.");
+      });
+
+      //socket.on('after connect', function(msg){
+      //  console.log('After connect', msg);
+      //});
+
+      // Use virtual joystick to control robot movement.
+      var joystick = nipplejs.create({
+        zone: document.getElementById("container"),
+        color: "blue",
+        mode: 'static',
+        position: {left: '50%', top: '50%'},
+        size: 150,
+      });
+
+      var startPos = null;
+      joystick.on("start", function (evt, data) {
+        startPos = data.position;
+      });
+
+      joystick.on("move", function (evt, data) {
+        if (startPos == null) return;
+        var x = ((data.position.x - startPos.x) / joystick.options.size) * 2;
+        var y = ((data.position.y - startPos.y) / joystick.options.size) * 2;
+        x = Math.round(x * 10) / 10
+	y = Math.round(y * 10) / 10
+        socket.emit("set_axis", { x: x, y: y });
+      });
+
+      joystick.on("end", function (evt, data) {
+        if (startPos == null) return;
+        socket.emit("set_axis", { x: 0, y: 0 });
+      });
+    </script>
+   
+  </body>
+</html>
